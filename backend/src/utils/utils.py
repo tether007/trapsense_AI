@@ -7,30 +7,46 @@ This is a helper module with functions used to authenticate frontend requests to
 
 
 
-from clerk_backend_API import Clerk,AuthenticateRequestOptions
+from clerk_backend_api import Clerk,AuthenticateRequestOptions
 
 from fastapi import HTTPException
 import os
 from dotenv import load_dotenv
+from collections import namedtuple
+import uuid
 
+
+UserObj = namedtuple("UserObj", ["id"])
 
 load_dotenv() # Load environment variables from .env file(it looks for .env file in the root directory by default)
 clerk_sdk=Clerk(bearer_auth=os.getenv("CLERK_SECRET_KEY")) #This is my secret key
 
 
 def authenticate_and_get_user(request):
-    
     try:
-        request_state=clerk_sdk.authenticate_request(request,
-                                                     AuthenticateRequestOptions(authorized_parties=["https://localhost:5173","http://localhost:5173"],
-                                                     jwt_key=os.getenv("JWT_SECRET_KEY") ))#only allows users from these ports to access the backend
-        
+        request_state = clerk_sdk.authenticate_request(
+            request,
+            AuthenticateRequestOptions(
+                authorized_parties=["http://localhost:5173","http://localhost:5174"],
+                jwt_key=os.getenv("JWT_SECRET_KEY")
+            )
+        )
+
         if not request_state.is_signed_in:
-            raise HTTPException(status_code=401, detail=("Invalid Token")) #if not signed in raise 401 error 
-        
-        user_id = request_state.payload.get("sub")#sub is the user id in clerk(encoded in the jwt token) and decoded by clerk_sdk.authenticate_request
-        
-        return {"user_id":user_id}#returning user id to the caller function
-                                
+            raise HTTPException(status_code=401, detail="Invalid Token")
+
+        # Clerk returns an identifier in the "sub" claim. We must not coerce it to a
+        # python uuid.UUID because Clerk ids are not guaranteed to be valid UUIDs.
+        # Keep the id as the original string so it matches the database (models.User.id is String).
+        user_id_str = request_state.payload.get("sub")
+        if not user_id_str:
+            raise HTTPException(status_code=401, detail="Invalid token payload")
+        return UserObj(id=user_id_str)
+
+    except HTTPException:
+        # Re-raise HTTPExceptions (like 401) as-is
+        raise
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Unauthorized/Invalid Credentials   ")
+        # Treat unexpected errors during auth as unauthorized rather than server error to avoid leaking
+        # internal exception messages to clients.
+        raise HTTPException(status_code=401, detail=f"Unauthorized/Invalid Credentials: {str(e)}")

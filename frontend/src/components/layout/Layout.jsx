@@ -15,6 +15,8 @@ function Layout(){
                     <nav>
                         <SignedIn>
                             <Link to="/">Home</Link>
+                            <Link to="/upload">Upload</Link>
+                            <Link to="/dashboard">Dashboard</Link>
                             <UserButton/>
                         </SignedIn>
                     </nav>

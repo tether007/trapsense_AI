@@ -5,10 +5,12 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
-    "clerk-sdk-python>=0.1.0",
+    "clerk-backend-api>=3.3.1",
     "fastapi>=0.118.0",
     "openai>=1.109.1",
+    "pydantic>=1.10.24",
     "python-dotenv>=1.1.1",
+    "python-multipart>=0.0.20",
     "sqlalchemy>=2.0.43",
     "uvicorn>=0.37.0",
 ]

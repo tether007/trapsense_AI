@@ -24,3 +24,17 @@ button:focus-visible {
   outline: 2px solid var(--primary-color);
   outline-offset: 2px;
 }
+
+.slider-container {
+  overflow: hidden;
+  width: 100%; /* or fixed width */
+  display: flex;
+  align-items: center;
+}
+
+.slider-content {
+  display: flex;
+  flex-direction: row;
+  gap: 16px; /* spacing between icons */
+  white-space: nowrap; /* prevent wrapping */
+}

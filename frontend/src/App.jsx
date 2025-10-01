@@ -1,9 +1,10 @@
 import './App.css'
 import Home from './pages/Home'
-import {BrowserRouter as Routes,Route} from 'react-router-dom'
+import {Route,Routes} from 'react-router-dom'
 import ClerkProviderPage from './auth/ClerkProviderPage'
 import AuthenticationPage from './auth/AuthenticationPage'
 import Layout from './components/layout/Layout'
+import UploadData from './pages/UploadData'
 
 
 function App() {
@@ -17,6 +18,7 @@ function App() {
           <Route path='/sign-up' element={<AuthenticationPage/>}/>
           <Route element={<Layout/>}>
             <Route path='/' element={<Home/>}/>
+            <Route path='/upload' element={<UploadData/>}/>
           </Route>
         </Routes>
       
