@@ -14,6 +14,7 @@ from ..database.db import (
 )
 from ..utils.utils import authenticate_and_get_user
 from ..database.models import get_db
+from ..services.s3 import generate_presigned_put_url, get_object_url
 
 router = APIRouter()
 
@@ -47,35 +48,44 @@ class MediaStatusUpdate(BaseModel):
 # File Storage Helper
 def save_uploaded_file(file: UploadFile, user_id: str) -> str:
     """Save file locally for now, easy to switch to S3 later"""
-    
-    # Generate unique filename
+    # Generate unique filename/key
     file_extension = os.path.splitext(file.filename)[1]
     unique_filename = f"{user_id}_{uuid.uuid4()}{file_extension}"
     file_path = os.path.join(UPLOAD_DIR, unique_filename)
-    
-    # Save file locally
-    with open(file_path, "wb") as buffer:
-        content = file.file.read()
-        buffer.write(content)
-    
-    # For local development, return relative path
-    # For production, you'd return a full URL like "https://yourdomain.com/uploads/filename"
-    return f"/uploads/{unique_filename}"
 
-# Future S3 version (commented for now)
-"""
-def save_to_s3(file: UploadFile, user_id: str) -> str:
-    # This would be your S3 upload logic
-    s3_client = boto3.client('s3')
-    unique_filename = f"{user_id}_{uuid.uuid4()}_{file.filename}"
-    
-    s3_client.upload_fileobj(
-        file.file, 
-        "your-bucket-name", 
-        unique_filename
-    )
-    return f"https://your-bucket.s3.region.amazonaws.com/{unique_filename}"
-"""
+    # Read file bytes once to avoid reusing/reading a possibly-closed file object
+    try:
+        # file.file may be a SpooledTemporaryFile or similar; read bytes
+        file.file.seek(0)
+    except Exception:
+        pass
+    content_bytes = file.file.read()
+
+    # If S3 is configured, upload to S3 and return the S3 object URL
+    try:
+        from ..services.s3 import BUCKET_NAME, upload_fileobj_to_s3
+        # Only attempt S3 upload if BUCKET_NAME is set
+        if BUCKET_NAME:
+            import io, logging
+            content_type = getattr(file, 'content_type', None)
+            fileobj = io.BytesIO(content_bytes)
+            try:
+                file_url = upload_fileobj_to_s3(fileobj, unique_filename, content_type=content_type)
+                return file_url
+            except Exception as e:
+                logging.exception("S3 upload failed, falling back to local storage: %s", str(e))
+    except Exception:
+        # If S3 not available in services or import error, fall back to local storage
+        pass
+
+    # Fallback: Save file locally
+    with open(file_path, "wb") as buffer:
+        buffer.write(content_bytes)
+
+    # Return relative local path
+    return f"backend/uploads/{unique_filename}"
+
+
 
 # Routes
 @router.post("/", response_model=MediaResponse)
@@ -109,6 +119,33 @@ def get_user_media(
     # Get all media for this user
     user_media = get_media_by_user(db, clerk_user.id)
     return user_media
+
+
+@router.get('/presign')
+def get_presigned_url(
+    request: Request,
+    file_name: str,
+    file_type: str,
+    db: Session = Depends(get_db)
+):
+    """Return a presigned PUT URL and the resulting file_url for a direct-to-S3 upload.
+
+    Frontend should PUT the raw file bytes to `upload_url` and then call the existing
+    `POST /api/media` (or `POST /api/media/`) to create the DB record using the returned `file_url`.
+    """
+    # Authenticate the user
+    clerk_user = authenticate_and_get_user(request)
+
+    # Create an object key that includes the user id so files are namespaced by user
+    import uuid
+    object_key = f"{clerk_user.id}_{uuid.uuid4()}_{file_name}"
+
+    try:
+        upload_url = generate_presigned_put_url(object_key, expiration=3600, content_type=file_type)
+        file_url = get_object_url(object_key)
+        return {"upload_url": upload_url, "file_url": file_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating presigned URL: {str(e)}")
 
 @router.get("/{media_id}", response_model=MediaResponse)
 def get_specific_media(
@@ -196,3 +233,30 @@ def upload_media_file(
         
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error uploading file: {str(e)}")
+
+
+@router.get('/presign')
+def get_presigned_url(
+    request: Request,
+    file_name: str,
+    file_type: str,
+    db: Session = Depends(get_db)
+):
+    """Return a presigned PUT URL and the resulting file_url for a direct-to-S3 upload.
+    THIS WHOLE ENDPOINT IS USED WHEN THE CLIENT SEND A GET REQUEST TO GET THE PRESIGNED URL->THIS URL IS THEN 'PUT' TO CREATE A SECURED UPLOAD TO S3
+    Frontend should PUT the raw file bytes to `upload_url` and then call the existing
+    `POST /api/media` (or `POST /api/media/`) to create the DB record using the returned `file_url`.
+    """
+    # Authenticate the user
+    clerk_user = authenticate_and_get_user(request)
+
+    # Create an object key that includes the user id so files are namespaced by user
+    import uuid
+    object_key = f"{clerk_user.id}_{uuid.uuid4()}_{file_name}"
+
+    try:
+        upload_url = generate_presigned_put_url(object_key, expiration=3600, content_type=file_type)
+        file_url = get_object_url(object_key)
+        return {"upload_url": upload_url, "file_url": file_url}
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error generating presigned URL: {str(e)}")

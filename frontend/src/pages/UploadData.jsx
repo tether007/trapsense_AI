@@ -37,22 +37,38 @@ function UploadData() {
     const uploaded = [];
 
     for (const file of files) {
-      const formData = new FormData();
-      formData.append("file", file);
-      formData.append("file_type", file.type.startsWith("image") ? "image" : "video");
-      // Optional: add latitude/longitude if needed
-      // formData.append("latitude", 12.34);
-      // formData.append("longitude", 56.78);
-
       try {
-        const res = await makeRequest("media/upload", {
-          method: "POST",
-          body: formData, // important: do NOT set Content-Type manually
-        });
-        uploaded.push(res);
+        // 1) Request presigned URL from the server
+        const mimeType = file.type || (file.name.endsWith('.mp4') ? 'video/mp4' : 'application/octet-stream')
+        const presignResp = await makeRequest(`media/presign?file_name=${encodeURIComponent(file.name)}&file_type=${encodeURIComponent(mimeType)}`, {
+          method: 'GET'
+        })
+
+        const uploadUrl = presignResp.upload_url
+        const fileUrl = presignResp.file_url
+
+        // 2) PUT the file bytes directly to S3 using the presigned URL
+        const putRes = await fetch(uploadUrl, {
+          method: 'PUT',
+          headers: {
+            'Content-Type': mimeType
+          },
+          body: file,
+        })
+        if (!putRes.ok) {
+          const errText = await putRes.text().catch(() => putRes.statusText)
+          throw new Error(`S3 upload failed: ${putRes.status} ${errText}`)
+        }
+
+        // 3) Tell our backend to create the DB record (store file_url)
+        const res = await makeRequest('media', {
+          method: 'POST',
+          body: JSON.stringify({ file_url: fileUrl, file_type: file.type.startsWith('image') ? 'image' : 'video' })
+        })
+        uploaded.push(res)
       } catch (err) {
-        console.error("Upload error:", err);
-        setError(err.message || "Upload failed");
+        console.error('Upload error:', err)
+        setError(err.message || 'Upload failed')
       }
     }
 
