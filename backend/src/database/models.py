@@ -3,7 +3,6 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from datetime import datetime
 
-
 engine = create_engine("sqlite:///./test.db", connect_args={"check_same_thread": False}, echo=True)
 Base = declarative_base()
 
