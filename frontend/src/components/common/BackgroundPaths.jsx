@@ -1,8 +1,3 @@
-// """"
-// A simple UI outsourced 
-
-// """"
-
 import { motion } from "framer-motion";
 
 function FloatingPaths({ position }) {

@@ -1,16 +1,23 @@
-/* App.css */
+/* App.css - Minimal and Sleek Layout */
+
 .app-layout {
   min-height: 100vh;
   display: flex;
   flex-direction: column;
   width: 100%;
+  background-color: var(--bg-color);
 }
 
+/* Header */
 .app-header {
-  background-color: var(--primary-color);
-  padding: 1rem;
+  background-color: #ffffff;
+  padding: 0.75rem 1.5rem;
   border-bottom: 1px solid var(--border-color);
   width: 100%;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.05);
+  position: sticky;
+  top: 0;
+  z-index: 50;
 }
 
 .header-content {
@@ -22,30 +29,43 @@
 }
 
 .header-content h1 {
-  font-size: 1.5rem;
-  color: white;
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: var(--text-color);
+  letter-spacing: -0.02em;
 }
 
+/* Navigation */
 .header-content nav {
   display: flex;
-  gap: 1.5rem;
+  align-items: center;
+  gap: 1rem;
 }
 
 .header-content nav a {
-  color: white;
+  color: var(--text-color);
   text-decoration: none;
   font-weight: 500;
-  transition: color 0.2s;
+  padding: 0.4rem 0.75rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s ease;
 }
 
 .header-content nav a:hover {
-  color: #f3f4f6;
+  background-color: var(--border-color);
+  color: var(--primary-color);
 }
 
+/* Main Section */
 .app-main {
   flex: 1;
   max-width: 1200px;
   margin: 0 auto;
   width: 100%;
   padding: 2rem 1rem;
+}
+
+/* Optional: smooth transition for theme or section changes */
+* {
+  transition: background-color 0.3s ease, color 0.3s ease;
 }
