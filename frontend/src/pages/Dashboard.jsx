@@ -6,9 +6,12 @@ import NonblankStatistics from "../components/common/NonblankStatistics";
 function Dashboard() {
   return (
     <div className="p-4 space-y-6">
+      
+
+      
 
       <section className="bg-white rounded-lg shadow-lg p-6 border border-gray-200">
-        <h2 className="text-2xl font-bold text-gray-800 mb-4"> Wildlife Heatmap (Serengeti)</h2>
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Wildlife Heatmap (Serengeti)</h2>
         <p className="text-gray-600 mb-4">Explore wildlife distribution patterns across the Serengeti ecosystem</p>
         <div className="rounded-lg overflow-hidden shadow">
           <HeatmapMap />
@@ -25,9 +28,6 @@ function Dashboard() {
         <AnimalCount />
         <NonblankStatistics />
       </div>
-
-      {/* Heatmap Section */}
-      
     </div>
   );
 }
