@@ -1,2 +1,5 @@
 # trapsense_AI
-now chec
+
+Post mid eval --
+
+
