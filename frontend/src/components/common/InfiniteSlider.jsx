@@ -59,7 +59,7 @@ const InfiniteSlider = ({
         animate={controls}
       >
         {children}
-        {children} 
+        {children} {/* duplicate for seamless scroll */}
       </motion.div>
     </div>
   );

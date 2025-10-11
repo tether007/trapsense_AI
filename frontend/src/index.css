@@ -3,12 +3,13 @@
 
 /* Custom global variables */
 :root {
-  --primary-color: #1B512D;
+  --primary-color: #2563eb; /* a clean blue tone */
   --error-color: #dc2626;
   --text-color: #1f2937;
-  --bg-color: #f3f4f6;
+  --bg-color: #f9fafb;
   --border-color: #e5e7eb;
 }
+
 
 body {
   margin: 0;
