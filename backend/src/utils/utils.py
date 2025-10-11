@@ -10,12 +10,13 @@ from fastapi import HTTPException
 import os
 from dotenv import load_dotenv
 from collections import namedtuple
+import uuid
 
 
 UserObj = namedtuple("UserObj", ["id"])
 
-load_dotenv() # Load environment variables from .env file
-clerk_sdk=Clerk(bearer_auth=os.getenv("CLERK_SECRET_KEY")) #This is my secret key in the sense dev's
+load_dotenv() # Load environment variables from .env file(it looks for .env file in the root directory by default)
+clerk_sdk=Clerk(bearer_auth=os.getenv("CLERK_SECRET_KEY")) #This is my secret key
 
 
 def authenticate_and_get_user(request):
@@ -31,7 +32,9 @@ def authenticate_and_get_user(request):
         if not request_state.is_signed_in:
             raise HTTPException(status_code=401, detail="Invalid Token")
 
-        #sub claim(clerk user id) to our String uuid is vague
+        # Clerk returns an identifier in the "sub" claim. We must not coerce it to a
+        # python uuid.UUID because Clerk ids are not guaranteed to be valid UUIDs.
+        # Keep the id as the original string so it matches the database (models.User.id is String).
         user_id_str = request_state.payload.get("sub")
         if not user_id_str:
             raise HTTPException(status_code=401, detail="Invalid token payload")
@@ -41,4 +44,6 @@ def authenticate_and_get_user(request):
         # Re-raise HTTPExceptions (like 401) as-is
         raise
     except Exception as e:
+        # Treat unexpected errors during auth as unauthorized rather than server error to avoid leaking
+        # internal exception messages to clients.
         raise HTTPException(status_code=401, detail=f"Unauthorized/Invalid Credentials: {str(e)}")
