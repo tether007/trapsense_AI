@@ -11,7 +11,7 @@ const Home = () => {
         <BackgroundPaths />
       </div>
       
-      {/* <Header /> */}
+      
       <main className="overflow-x-hidden">
         <section className="relative">
           <div className="py-24 md:pb-32 lg:pb-36 lg:pt-72">
