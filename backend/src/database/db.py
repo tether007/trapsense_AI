@@ -3,7 +3,6 @@
 This file contains functions to interact with the database:
 - Users
 - Media (including YOLO predictions)
-- for now later is added: Traps, Locations, etc.
 
 """
 
@@ -11,9 +10,10 @@ from sqlalchemy.orm import Session
 from datetime import datetime
 from . import models
 import uuid
+import random
 
 
-# Users crud funcs
+# ---------------- Users ----------------
 def get_user_by_id(db: Session, user_id: str):
     return db.query(models.User).filter(models.User.id == user_id).first()
 
@@ -37,6 +37,11 @@ def create_media(
     longitude: float = None,
 ):
     media_id = str(uuid.uuid4())
+    # If coordinates not provided, generate a dummy coordinate in Serengeti for demo
+    if latitude is None or longitude is None:
+        lat, lon = _generate_serengeti_coord()
+        latitude = latitude if latitude is not None else lat
+        longitude = longitude if longitude is not None else lon
     db_media = models.Media(
         id=media_id,
         user_id=user_id,
@@ -61,14 +66,22 @@ def create_media_batch(db: Session, user_id: str, files: list):
     media_objects = []
     for f in files:
         media_id = str(uuid.uuid4())
+        # Fill missing latitude/longitude with dummy Serengeti coords for demo
+        lat = f.get("latitude")
+        lon = f.get("longitude")
+        if lat is None or lon is None:
+            gen_lat, gen_lon = _generate_serengeti_coord()
+            lat = lat if lat is not None else gen_lat
+            lon = lon if lon is not None else gen_lon
+
         media = models.Media(
             id=media_id,
             user_id=user_id,
             file_url=f.get("file_url"),
             file_type=f.get("file_type"),
-            folder_path=f.get("folder_path"),  # NEW: Store folder path
-            latitude=f.get("latitude"),
-            longitude=f.get("longitude"),
+            folder_path=f.get("folder_path"),  
+            latitude=lat,
+            longitude=lon,
             is_processed=False,
         )
         media_objects.append(media)
@@ -79,6 +92,22 @@ def create_media_batch(db: Session, user_id: str, files: list):
         db.refresh(media)
 
     return media_objects
+
+
+def get_all_media(db: Session):
+    """Return all media records (useful for heatmap endpoints)."""
+    return db.query(models.Media).all()
+
+
+def _generate_serengeti_coord() -> tuple:
+    """Generate a random coordinate within a rough bounding box of the Serengeti for demo purposes.
+
+    Bounding box approx: lat between -2.7 and -1.0, lon between 34.5 and 35.7
+    Returns (lat, lon)
+    """
+    lat = random.uniform(-2.7, -1.0)
+    lon = random.uniform(34.5, 35.7)
+    return (round(lat, 6), round(lon, 6))
 
 
 def get_media_by_user(db: Session, user_id: str):
@@ -123,7 +152,6 @@ def get_predictions_by_media(db: Session, media_id: str):
     
     import json
     
-    # Parse predictions if it's a string
     predictions_data = media.predictions
     if isinstance(predictions_data, str):
         try:
